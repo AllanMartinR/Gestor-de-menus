@@ -3,74 +3,81 @@
 {% block title %}Ingredientes | SICSA{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 mb-0">Ingredientes</h1>
-    <a class="btn btn-primary" href="{% url 'ingrediente_create' %}">Nuevo ingrediente</a>
-</div>
-
-<form method="get" class="row g-2 mb-3">
-    <div class="col-sm-8 col-md-6 col-lg-4">
-        <input
-            type="search"
-            name="q"
-            value="{{ q }}"
-            class="form-control"
-            placeholder="Buscar por nombre"
-        >
-    </div>
-    <div class="col-auto">
-        <button type="submit" class="btn btn-outline-primary">Buscar</button>
-        {% if q %}
-            <a class="btn btn-outline-secondary" href="{% url 'ingrediente_list' %}">Limpiar</a>
-        {% endif %}
-    </div>
-</form>
-
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        {% if ingredientes %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Unidad</th>
-                        <th class="text-end">Costo unitario</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ingrediente in ingredientes %}
-                    <tr>
-                        <td>{{ ingrediente.nombre }}</td>
-                        <td>{{ ingrediente.get_unidad_medida_display }}</td>
-                        <td class="text-end">${{ ingrediente.costo_unitario }}</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'ingrediente_update' ingrediente.pk %}">Editar</a>
-                            <form
-                                method="post"
-                                action="{% url 'ingrediente_baja' ingrediente.pk %}"
-                                class="d-inline"
-                                onsubmit="return confirm('¿Dar de baja {{ ingrediente.nombre }}? El registro se conservará en el historial.');"
-                            >
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Dar de baja</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="space-y-6">
+    <!-- Header del Módulo -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900">Módulo de Ingredientes</h2>
+            <p class="text-xs text-slate-500">Administración de insumos, unidades y costos base.</p>
         </div>
-        {% else %}
-        <p class="text-muted mb-0 p-3">
+        <a href="{% url 'ingrediente_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-sm transition">
+            + Nuevo Ingrediente
+        </a>
+    </div>
+
+    <!-- Barra de búsqueda dinámica -->
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <form method="get" class="flex gap-3">
+            <input type="search" name="q" value="{{ q|default_if_none:'' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600" placeholder="Buscar ingrediente por nombre...">
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-md transition">
+                Buscar
+            </button>
             {% if q %}
-                No se encontraron ingredientes activos para «{{ q }}».
-            {% else %}
-                No hay ingredientes activos. Registre el primero con «Nuevo ingrediente».
+                <a href="{% url 'ingrediente_list' %}" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold shadow-sm transition flex items-center">
+                    Limpiar
+                </a>
             {% endif %}
-        </p>
-        {% endif %}
+        </form>
+    </div>
+
+    <!-- Tabla de ingredientes conectada a la base de datos -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
+                <tr>
+                    <th class="px-6 py-3.5">Nombre</th>
+                    <th class="px-6 py-3.5">Unidad Base</th>
+                    <th class="px-6 py-3.5">Costo Unitario</th>
+                    <th class="px-6 py-3.5">Estatus</th>
+                    <th class="px-6 py-3.5 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                {% for ingrediente in ingredientes %}
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4 font-medium">{{ ingrediente.nombre }}</td>
+                    <td class="px-6 py-4">{{ ingrediente.get_unidad_medida_display }}</td>
+                    <td class="px-6 py-4 font-semibold">${{ ingrediente.costo_unitario }}</td>
+                    <td class="px-6 py-4">
+                        {% if ingrediente.activo %}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Activo</span>
+                        {% else %}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-3">
+                        <a href="{% url 'ingrediente_update' ingrediente.pk %}" class="text-blue-600 hover:underline text-xs font-semibold">Editar</a>
+                        
+                        <!-- Formulario de Baja protegido con CSRF -->
+                        <form method="post" action="{% url 'ingrediente_baja' ingrediente.pk %}" class="inline-block" onsubmit="return confirm('¿Dar de baja {{ ingrediente.nombre }}? El registro se conservará en el historial.');">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:underline text-xs font-semibold">Dar de baja</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-slate-500">
+                        {% if q %}
+                            No se encontraron ingredientes activos para «{{ q }}».
+                        {% else %}
+                            No hay ingredientes activos. Registre el primero con «+ Nuevo Ingrediente».
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator
 
 class IngredienteQuerySet(models.QuerySet):
     """Queryset reutilizable: platillos deben usar .activos() al seleccionar ingredientes."""
@@ -24,6 +24,7 @@ class Ingrediente(models.Model):
         'costo unitario',
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(0.01)]
     )
     activo = models.BooleanField('activo', default=True)
     fecha_creacion = models.DateTimeField('fecha de creación', auto_now_add=True)
@@ -38,3 +39,4 @@ class Ingrediente(models.Model):
 
     def __str__(self):
         return self.nombre
+    
