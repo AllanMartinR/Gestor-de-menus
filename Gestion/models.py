@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator
  
+ 
 # Create your models here. 
  
 # ---------------------------------------------------------------------------
@@ -20,6 +21,7 @@ class GerenteRegional(models.Model):
  
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
+ 
  
 # ---------------------------------------------------------------------------
 # SUCURSAL
@@ -46,6 +48,7 @@ class Sucursal(models.Model):
  
     def __str__(self):
         return self.nombre
+ 
  
 # ---------------------------------------------------------------------------
 # EMPLEADO
@@ -75,6 +78,7 @@ class Empleado(models.Model):
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
  
+ 
 # ---------------------------------------------------------------------------
 # CLIENTE
 # ---------------------------------------------------------------------------
@@ -100,6 +104,7 @@ class Cliente(models.Model):
     def __str__(self):
         return self.nombre
  
+ 
 # ---------------------------------------------------------------------------
 # PROVEEDOR
 # ---------------------------------------------------------------------------
@@ -117,24 +122,15 @@ class Proveedor(models.Model):
     def __str__(self):
         return self.nombre
  
+ 
 # ---------------------------------------------------------------------------
 # INGREDIENTE
 # ---------------------------------------------------------------------------
 class Ingrediente(models.Model):
-    UNIDADES = [
-        ('kg', 'Kilogramos'),
-        ('l', 'Litros'),
-        ('pza', 'Piezas'),
-    ]
-
     id_ingrediente = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True)
-    unidad_medida = models.CharField(max_length=5, choices=UNIDADES)
-    costo_unitario = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(0.01)]
-    )
+    nombre = models.CharField(max_length=100)
+    unidad_medida = models.CharField(max_length=20)
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     activo = models.BooleanField(default=True)
  
     # Relación "suministra": un proveedor suministra muchos ingredientes
@@ -151,7 +147,8 @@ class Ingrediente(models.Model):
         ordering = ["nombre"]
  
     def __str__(self):
-        return f"{self.nombre} ({self.get_unidad_medida_display()})"
+        return self.nombre
+ 
  
 # ---------------------------------------------------------------------------
 # PLATILLO
@@ -186,6 +183,7 @@ class Platillo(models.Model):
         )
         return total
  
+ 
 # ---------------------------------------------------------------------------
 # REQUIERE (tabla asociativa Platillo <-> Ingrediente)
 # ---------------------------------------------------------------------------
@@ -205,6 +203,7 @@ class PlatilloIngrediente(models.Model):
  
     def __str__(self):
         return f"{self.platillo} requiere {self.cantidad} {self.unidad_medida} de {self.ingrediente}"
+ 
  
 # ---------------------------------------------------------------------------
 # MENU
@@ -253,6 +252,7 @@ class Menu(models.Model):
             self.save(update_fields=["costo_total", "costo_por_comensal"])
         return self.costo_total, self.costo_por_comensal
  
+ 
 # ---------------------------------------------------------------------------
 # INCLUYE (tabla asociativa Menu <-> Platillo)
 # ---------------------------------------------------------------------------
@@ -280,6 +280,7 @@ class MenuPlatillo(models.Model):
     def __str__(self):
         return f"{self.menu} - {self.platillo} ({self.get_dia_semana_display()})"
  
+ 
 # ---------------------------------------------------------------------------
 # SOLICITA (tabla asociativa Cliente <-> Menu)
 # ---------------------------------------------------------------------------
@@ -300,3 +301,4 @@ class Solicitud(models.Model):
  
     def __str__(self):
         return f"{self.cliente} -> {self.menu} (${self.costo_total})"
+ 
