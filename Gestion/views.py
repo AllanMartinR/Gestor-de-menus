@@ -17,7 +17,7 @@ class IngredienteListView(LoginRequiredMixin, ListView):
     context_object_name = 'ingredientes'
 
     def get_queryset(self):
-        queryset = Ingrediente.objects.activos()
+        queryset = Ingrediente.objects.filter(activo=True)
         q = self.request.GET.get('q', '').strip()
         if q:
             queryset = queryset.filter(nombre__icontains=q)
