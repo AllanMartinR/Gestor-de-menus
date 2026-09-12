@@ -1,21 +1,22 @@
-"""Conversión de unidades para costeo de platillos (SCRUM-16).
+"""Servicios de costeo de platillos.
 
+SCRUM-16: conversión de unidades (convertir_a_unidad_base).
 Usa Ingrediente.equivalencia_pza (Opción A): cuántas unidades de la unidad
 base del ingrediente equivalen a 1 pieza. No hay tabla genérica 1 pz = X kg.
 
 Limitación aceptada: la equivalencia pz→unidad base es constante para un
 mismo ingrediente; no varía por lote ni proveedor.
 
-No implementa calcular_costo_platillo() (SCRUM-17).
+SCRUM-17: calcular_costo_platillo reutiliza convertir_a_unidad_base.
 """
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .models import Ingrediente
+    from .models import Ingrediente, Platillo
 
 FAMILIA_MASA = 'masa'
 FAMILIA_VOLUMEN = 'volumen'
@@ -135,3 +136,43 @@ def convertir_a_unidad_base(
         f'No se puede convertir {unidad_capturada} a {unidad_base} '
         f'para el ingrediente "{ingrediente.nombre}".'
     )
+
+
+class PlatilloSinIngredientesError(Exception):
+    """El platillo no tiene líneas de receta para costear."""
+
+
+def calcular_costo_platillo(platillo: Platillo) -> Decimal:
+    """Costo total de la receta, redondeado a 2 decimales (ROUND_HALF_UP).
+
+    Recorre ``platillo.receta``. Cada ``IngredientePlatillo.cantidad`` se
+    interpreta en la unidad base del ingrediente (``unidad_medida``); no hay
+    unidad capturada en la línea. Por línea:
+
+        cantidad_base = convertir_a_unidad_base(
+            ingrediente, cantidad, ingrediente.unidad_medida
+        )
+        subtotal = cantidad_base * ingrediente.costo_unitario
+
+    Reutiliza SCRUM-16; no reimplementa conversión. Las excepciones
+    UnidadNoConvertibleError y EquivalenciaNoDefinidaError se propagan.
+
+    Si no hay ingredientes, lanza PlatilloSinIngredientesError.
+    """
+    lineas = list(platillo.receta.select_related('ingrediente'))
+    if not lineas:
+        raise PlatilloSinIngredientesError(
+            f'El platillo "{platillo.nombre}" no tiene ingredientes asociados.'
+        )
+
+    total = Decimal('0')
+    for linea in lineas:
+        ingrediente = linea.ingrediente
+        cantidad_base = convertir_a_unidad_base(
+            ingrediente,
+            linea.cantidad,
+            ingrediente.unidad_medida,
+        )
+        total += cantidad_base * _a_decimal(ingrediente.costo_unitario)
+
+    return total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
