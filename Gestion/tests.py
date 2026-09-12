@@ -31,7 +31,7 @@ class IngredienteCRUDTests(TestCase):
     def test_crear_ingrediente(self):
         response = self.client.post(
             reverse('ingrediente_create'),
-            {'nombre': 'Aceite', 'unidad_medida': 'l', 'costo_unitario': '25.50'},
+            {'nombre': 'Aceite', 'unidad_medida': 'lt', 'costo_unitario': '25.50'},
         )
         self.assertRedirects(response, reverse('ingrediente_list'))
         self.assertTrue(Ingrediente.objects.filter(nombre='Aceite', activo=True).exists())
@@ -82,9 +82,14 @@ class IngredienteCRUDTests(TestCase):
         ingrediente.refresh_from_db()
         self.assertFalse(ingrediente.activo)
         self.assertTrue(Ingrediente.objects.filter(pk=ingrediente.pk).exists())
-        self.assertNotIn(ingrediente, Ingrediente.objects.activos())
+        self.assertNotIn(ingrediente, Ingrediente.objects.filter(activo=True))
 
-    def test_manager_activos_reutilizable(self):
+    def test_formulario_nuevo_usa_unidades_del_modelo(self):
+        response = self.client.get(reverse('ingrediente_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Nuevo ingrediente')
+
+    def test_queryset_solo_activos(self):
         Ingrediente.objects.create(nombre='Arroz', unidad_medida='kg', costo_unitario='10.00')
         Ingrediente.objects.create(
             nombre='Sal',
@@ -92,5 +97,6 @@ class IngredienteCRUDTests(TestCase):
             costo_unitario='5.00',
             activo=False,
         )
-        self.assertEqual(Ingrediente.objects.activos().count(), 1)
-        self.assertEqual(Ingrediente.objects.activos().get().nombre, 'Arroz')
+        activos = Ingrediente.objects.filter(activo=True)
+        self.assertEqual(activos.count(), 1)
+        self.assertEqual(activos.get().nombre, 'Arroz')

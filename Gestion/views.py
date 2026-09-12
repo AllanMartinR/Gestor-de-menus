@@ -50,7 +50,7 @@ class IngredienteUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
     success_message = 'Ingrediente "%(nombre)s" actualizado correctamente.'
 
     def get_queryset(self):
-        return Ingrediente.objects.activos()
+        return Ingrediente.objects.filter(activo=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -64,7 +64,7 @@ def ingrediente_baja(request, pk):
     """Baja lógica: activo=False. No usa .delete() ni DeleteView."""
     ingrediente = get_object_or_404(Ingrediente, pk=pk, activo=True)
     ingrediente.activo = False
-    ingrediente.save(update_fields=['activo', 'fecha_actualizacion'])
+    ingrediente.save(update_fields=['activo'])
     messages.success(
         request,
         f'El ingrediente "{ingrediente.nombre}" se dio de baja.',
