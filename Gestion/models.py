@@ -19,6 +19,21 @@ class Ingrediente(models.Model):
         validators=[MinValueValidator(0.01)],
         verbose_name="Costo unitario"
     )
+    # Opción A (SCRUM-16): un Decimal por ingrediente en lugar de una tabla
+    # EquivalenciaUnidad. "pz" no tiene peso/volumen universal (un huevo ≠ una
+    # cebolla). equivalencia_pza = cuántas unidades de unidad_medida equivalen
+    # a 1 pieza. Vacío si no aplica. No se adivina densidad kg↔lt.
+    equivalencia_pza = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name="Equivalencia por pieza",
+        help_text=(
+            "Cuántas unidades de la unidad base equivalen a 1 pieza. "
+            "Ej. 0.060 si 1 huevo = 0.060 kg. Vacío si no aplica."
+        ),
+    )
     activo = models.BooleanField(default=True, verbose_name="Estatus")
 
     def __str__(self):
