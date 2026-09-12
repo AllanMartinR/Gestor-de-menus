@@ -47,7 +47,7 @@ class IngredienteForm(forms.ModelForm):
         self.fields['unidad_medida'].required = True
         self.fields['unidad_medida'].choices = [
             ('', 'Seleccione una unidad'),
-            *Ingrediente.UnidadMedida.choices,
+            *Ingrediente.UNIDADES,
         ]
 
     def full_clean(self):
