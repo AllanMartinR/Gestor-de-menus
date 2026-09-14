@@ -1,8 +1,8 @@
 from django import forms
-
-from .models import Ingrediente
-
-
+ 
+from .models import Ingrediente, Platillo
+ 
+ 
 class IngredienteForm(forms.ModelForm):
     class Meta:
         model = Ingrediente
@@ -41,7 +41,7 @@ class IngredienteForm(forms.ModelForm):
                 'required': 'El costo unitario es obligatorio.',
             },
         }
-
+ 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['unidad_medida'].required = True
@@ -49,7 +49,7 @@ class IngredienteForm(forms.ModelForm):
             ('', 'Seleccione una unidad'),
             *Ingrediente.UNIDADES,
         ]
-
+ 
     def full_clean(self):
         super().full_clean()
         for name in self.fields:
@@ -57,7 +57,7 @@ class IngredienteForm(forms.ModelForm):
                 css = self.fields[name].widget.attrs.get('class', '')
                 if 'is-invalid' not in css.split():
                     self.fields[name].widget.attrs['class'] = f'{css} is-invalid'.strip()
-
+ 
     def clean_nombre(self):
         nombre = (self.cleaned_data.get('nombre') or '').strip()
         if not nombre:
@@ -68,7 +68,7 @@ class IngredienteForm(forms.ModelForm):
         if duplicados.exists():
             raise forms.ValidationError('Ya existe un ingrediente con este nombre.')
         return nombre
-
+ 
     def clean_costo_unitario(self):
         costo = self.cleaned_data.get('costo_unitario')
         if costo is None:
@@ -76,3 +76,53 @@ class IngredienteForm(forms.ModelForm):
         if costo <= 0:
             raise forms.ValidationError('El costo unitario debe ser mayor a cero.')
         return costo
+ 
+ 
+class PlatilloForm(forms.ModelForm):
+    class Meta:
+        model = Platillo
+        fields = ('nombre', 'descripcion')
+        labels = {
+            'nombre': 'Nombre del platillo',
+            'descripcion': 'Descripción',
+        }
+        widgets = {
+            'nombre': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ej. Enchiladas verdes',
+                    'autocomplete': 'off',
+                }
+            ),
+            'descripcion': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Descripción breve del platillo (opcional)',
+                    'rows': 3,
+                }
+            ),
+        }
+        error_messages = {
+            'nombre': {
+                'required': 'El nombre del platillo es obligatorio.',
+            },
+        }
+ 
+    def full_clean(self):
+        super().full_clean()
+        for name in self.fields:
+            if self.errors.get(name):
+                css = self.fields[name].widget.attrs.get('class', '')
+                if 'is-invalid' not in css.split():
+                    self.fields[name].widget.attrs['class'] = f'{css} is-invalid'.strip()
+ 
+    def clean_nombre(self):
+        nombre = (self.cleaned_data.get('nombre') or '').strip()
+        if not nombre:
+            raise forms.ValidationError('El nombre del platillo es obligatorio.')
+        duplicados = Platillo.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            duplicados = duplicados.exclude(pk=self.instance.pk)
+        if duplicados.exists():
+            raise forms.ValidationError('Ya existe un platillo con este nombre.')
+        return nombre
