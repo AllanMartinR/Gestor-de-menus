@@ -1,6 +1,8 @@
+
 from django import forms
+from django.forms import inlineformset_factory
  
-from .models import Ingrediente, Platillo
+from .models import Ingrediente, IngredientePlatillo, Platillo
  
  
 class IngredienteForm(forms.ModelForm):
@@ -126,3 +128,49 @@ class PlatilloForm(forms.ModelForm):
         if duplicados.exists():
             raise forms.ValidationError('Ya existe un platillo con este nombre.')
         return nombre
+ 
+ 
+class IngredientePlatilloForm(forms.ModelForm):
+    class Meta:
+        model = IngredientePlatillo
+        fields = ('ingrediente', 'cantidad')
+        widgets = {
+            'ingrediente': forms.Select(attrs={'class': 'form-select'}),
+            'cantidad': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Cantidad',
+                    'step': '0.001',
+                    'min': '0.001',
+                }
+            ),
+        }
+ 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ingrediente'].queryset = Ingrediente.objects.filter(activo=True)
+        self.fields['ingrediente'].empty_label = 'Seleccione un ingrediente'
+        self.fields['ingrediente'].required = False
+        self.fields['cantidad'].required = False
+ 
+    def clean(self):
+        cleaned_data = super().clean()
+        ingrediente = cleaned_data.get('ingrediente')
+        cantidad = cleaned_data.get('cantidad')
+        if ingrediente and not cantidad:
+            self.add_error('cantidad', 'Indique la cantidad para este ingrediente.')
+        if cantidad and not ingrediente:
+            self.add_error('ingrediente', 'Seleccione el ingrediente.')
+        return cleaned_data
+ 
+ 
+IngredientePlatilloFormSet = inlineformset_factory(
+    Platillo,
+    IngredientePlatillo,
+    form=IngredientePlatilloForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)
+ 

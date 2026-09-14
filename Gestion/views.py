@@ -1,14 +1,31 @@
+
+import json
+ 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, UpdateView
  
-from .forms import IngredienteForm, PlatilloForm
+from .forms import IngredienteForm, IngredientePlatilloFormSet, PlatilloForm
 from .models import Ingrediente, Platillo
+ 
+ 
+def _ingredientes_data_json():
+    """Costo unitario y unidad de cada ingrediente activo, para el costeo en vivo del platillo."""
+    datos = {
+        str(ingrediente.pk): {
+            'nombre': ingrediente.nombre,
+            'unidad': ingrediente.get_unidad_medida_display(),
+            'costo': float(ingrediente.costo_unitario),
+        }
+        for ingrediente in Ingrediente.objects.filter(activo=True)
+    }
+    return json.dumps(datos)
  
  
 class IngredienteListView(LoginRequiredMixin, ListView):
@@ -100,7 +117,25 @@ class PlatilloCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = 'Nuevo platillo'
+        context['ingredientes_data_json'] = _ingredientes_data_json()
+        if 'receta_formset' not in context:
+            if self.request.method == 'POST':
+                context['receta_formset'] = IngredientePlatilloFormSet(self.request.POST, prefix='receta')
+            else:
+                context['receta_formset'] = IngredientePlatilloFormSet(prefix='receta')
         return context
+ 
+    def form_valid(self, form):
+        receta_formset = IngredientePlatilloFormSet(self.request.POST, prefix='receta')
+        if not receta_formset.is_valid():
+            return self.render_to_response(
+                self.get_context_data(form=form, receta_formset=receta_formset)
+            )
+        self.object = form.save()
+        receta_formset.instance = self.object
+        receta_formset.save()
+        messages.success(self.request, self.get_success_message(form.cleaned_data))
+        return HttpResponseRedirect(self.get_success_url())
  
  
 class PlatilloUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -116,7 +151,31 @@ class PlatilloUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = 'Editar platillo'
+        context['ingredientes_data_json'] = _ingredientes_data_json()
+        if 'receta_formset' not in context:
+            if self.request.method == 'POST':
+                context['receta_formset'] = IngredientePlatilloFormSet(
+                    self.request.POST, instance=self.object, prefix='receta'
+                )
+            else:
+                context['receta_formset'] = IngredientePlatilloFormSet(
+                    instance=self.object, prefix='receta'
+                )
         return context
+ 
+    def form_valid(self, form):
+        receta_formset = IngredientePlatilloFormSet(
+            self.request.POST, instance=self.object, prefix='receta'
+        )
+        if not receta_formset.is_valid():
+            return self.render_to_response(
+                self.get_context_data(form=form, receta_formset=receta_formset)
+            )
+        self.object = form.save()
+        receta_formset.instance = self.object
+        receta_formset.save()
+        messages.success(self.request, self.get_success_message(form.cleaned_data))
+        return HttpResponseRedirect(self.get_success_url())
  
  
 @login_required
@@ -131,4 +190,3 @@ def platillo_baja(request, pk):
         f'El platillo "{platillo.nombre}" se dio de baja.',
     )
     return redirect('platillo_list')
- 

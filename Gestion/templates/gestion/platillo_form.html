@@ -40,6 +40,86 @@
                         {% endif %}
                     </div>
 
+                    <hr>
+                    <h2 class="h6 mb-3">Ingredientes que componen el platillo</h2>
+
+                    {{ receta_formset.management_form }}
+
+                    <div id="receta-rows">
+                        {% for receta_form in receta_formset %}
+                        <div class="row g-2 align-items-start mb-2 receta-row">
+                            {{ receta_form.id }}
+                            <div class="col-6">
+                                {{ receta_form.ingrediente }}
+                                {% if receta_form.ingrediente.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in receta_form.ingrediente.errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-4">
+                                {{ receta_form.cantidad }}
+                                {% if receta_form.cantidad.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in receta_form.cantidad.errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-2">
+                                {% if receta_form.instance.pk %}
+                                    <div class="form-check mt-2">
+                                        {{ receta_form.DELETE }}
+                                        <label class="form-check-label small text-danger">Quitar</label>
+                                    </div>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-fila">Quitar</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" id="btn-agregar-ingrediente" class="btn btn-sm btn-outline-primary mb-4">
+                        + Agregar ingrediente
+                    </button>
+
+                    <template id="receta-empty-form">
+                        <div class="row g-2 align-items-start mb-2 receta-row">
+                            <div class="col-6">{{ receta_formset.empty_form.ingrediente }}</div>
+                            <div class="col-4">{{ receta_formset.empty_form.cantidad }}</div>
+                            <div class="col-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-fila">Quitar</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <hr>
+                    <h2 class="h6 mb-3">Costeo del platillo</h2>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered" id="tabla-costeo">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ingrediente</th>
+                                    <th>Unidad</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-costeo-body"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-semibold">Costo total</td>
+                                    <td id="costo-total" class="fw-bold">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-semibold">Entre 100</td>
+                                    <td id="costo-entre-100" class="fw-bold">$0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Guardar</button>
                         <a class="btn btn-outline-secondary" href="{% url 'platillo_list' %}">Cancelar</a>
@@ -49,4 +129,92 @@
         </div>
     </div>
 </div>
+
+<script type="application/json" id="ingredientes-costo-data">{{ ingredientes_data_json|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var totalFormsInput = document.getElementById('id_receta-TOTAL_FORMS');
+    var rowsContainer = document.getElementById('receta-rows');
+    var emptyFormTemplate = document.getElementById('receta-empty-form');
+    var btnAgregar = document.getElementById('btn-agregar-ingrediente');
+    var ingredientesData = JSON.parse(document.getElementById('ingredientes-costo-data').textContent);
+    var costeoBody = document.getElementById('tabla-costeo-body');
+    var costoTotalCelda = document.getElementById('costo-total');
+    var costoEntre100Celda = document.getElementById('costo-entre-100');
+
+    function recalcularCosteo() {
+        costeoBody.innerHTML = '';
+        var total = 0;
+
+        document.querySelectorAll('.receta-row').forEach(function (row) {
+            var deleteCheckbox = row.querySelector('input[type="checkbox"][id$="-DELETE"]');
+            if (deleteCheckbox && deleteCheckbox.checked) {
+                return;
+            }
+            var select = row.querySelector('select');
+            var cantidadInput = row.querySelector('input[type="number"]');
+            if (!select || !cantidadInput) {
+                return;
+            }
+            var datos = ingredientesData[select.value];
+            var cantidad = parseFloat(cantidadInput.value);
+            if (!datos || !cantidad || isNaN(cantidad)) {
+                return;
+            }
+            var subtotal = datos.costo * cantidad;
+            total += subtotal;
+
+            var fila = document.createElement('tr');
+            fila.innerHTML =
+                '<td>' + datos.nombre + '</td>' +
+                '<td>' + datos.unidad + '</td>' +
+                '<td>$' + datos.costo.toFixed(2) + '</td>' +
+                '<td>' + cantidad + '</td>' +
+                '<td>$' + subtotal.toFixed(2) + '</td>';
+            costeoBody.appendChild(fila);
+        });
+
+        costoTotalCelda.textContent = '$' + total.toFixed(2);
+        costoEntre100Celda.textContent = '$' + (total / 100).toFixed(2);
+    }
+
+    function activarQuitar(row) {
+        var btn = row.querySelector('.btn-quitar-fila');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                row.remove();
+                recalcularCosteo();
+            });
+        }
+        var checkbox = row.querySelector('input[type="checkbox"][id$="-DELETE"]');
+        if (checkbox) {
+            checkbox.addEventListener('change', function () {
+                row.style.opacity = checkbox.checked ? '0.4' : '1';
+                recalcularCosteo();
+            });
+        }
+    }
+
+    document.querySelectorAll('.receta-row').forEach(activarQuitar);
+
+    btnAgregar.addEventListener('click', function () {
+        var formCount = parseInt(totalFormsInput.value, 10);
+        var newRowHtml = emptyFormTemplate.innerHTML.split('__prefix__').join(formCount);
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = newRowHtml.trim();
+        var newRow = wrapper.firstElementChild;
+        rowsContainer.appendChild(newRow);
+        totalFormsInput.value = formCount + 1;
+        activarQuitar(newRow);
+    });
+
+    rowsContainer.addEventListener('input', recalcularCosteo);
+    rowsContainer.addEventListener('change', recalcularCosteo);
+
+    recalcularCosteo();
+});
+</script>
 {% endblock %}
