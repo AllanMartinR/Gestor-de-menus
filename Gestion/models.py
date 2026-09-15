@@ -66,3 +66,26 @@ class IngredientePlatillo(models.Model):
 
     def __str__(self):
         return f"{self.cantidad} de {self.ingrediente.nombre} en {self.platillo.nombre}"
+
+
+# --- TICKET SCRUM-19 (Menús) ---
+class Menu(models.Model):
+    nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre del menú")
+    descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class MenuPlatillo(models.Model):
+    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='composicion')
+    platillo = models.ForeignKey(Platillo, on_delete=models.RESTRICT)
+
+    class Meta:
+        unique_together = ('menu', 'platillo')
+        verbose_name = "Platillo de menú"
+        verbose_name_plural = "Platillos de menú"
+
+    def __str__(self):
+        return f"{self.platillo.nombre} en {self.menu.nombre}"
