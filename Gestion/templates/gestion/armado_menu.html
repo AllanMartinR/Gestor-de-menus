@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Gestión de Menús</h2>
+
+    <!-- SECCIÓN 1: Catálogo de Menús Guardados (Tu primer dibujo) -->
+    <div class="mb-5">
+        <h4 class="mb-3">Menús Guardados</h4>
+        <div class="d-flex flex-wrap gap-3">
+            
+            <!-- Tarjeta de ejemplo de un menú guardado -->
+            <div class="card border-success shadow-sm" style="width: 18rem;">
+                <div class="card-body">
+                    <h5 class="card-title text-success">Menú 1</h5>
+                    <ul class="card-text small text-muted">
+                        <li>Huevos Rancheros (Desayuno)</li>
+                        <li>Pollo Asado (Comida)</li>
+                    </ul>
+                    <button class="btn btn-sm btn-outline-info w-100 mb-3">Más detalles</button>
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-sm btn-warning text-dark">Editar</button>
+                        <button class="btn btn-sm btn-danger">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón para crear un Menú Nuevo -->
+            <div class="card border-primary border-dashed shadow-sm d-flex align-items-center justify-content-center" style="width: 18rem; min-height: 200px; border-style: dashed;">
+                <button class="btn btn-primary">+ Nuevo Menú</button>
+            </div>
+            
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <!-- SECCIÓN 2: Área de Armado (Tu segundo dibujo) -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Crear / Editar Menú</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Nombre del Menú:</label>
+                    <input type="text" class="form-control" name="nombre_menu" placeholder="Ej. Menú Industrial Norteño" required>
+                </div>
+
+                <!-- Bloque Desayuno -->
+                <div class="card mb-3 border-dark">
+                    <div class="card-body bg-light">
+                        <h5 class="card-title">Desayuno</h5>
+                        <p class="text-danger small fw-bold mb-1">⚠ Platillo no disponible (Faltan insumos)</p>
+                        <select class="form-select form-control" name="platillo_desayuno">
+                            <option value="">Selecciona un platillo...</option>
+                            <!-- Aquí Django cargará los platillos después -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bloque Comida -->
+                <div class="card mb-3 border-dark">
+                    <div class="card-body bg-light">
+                        <h5 class="card-title">Comida</h5>
+                        <select class="form-select form-control" name="platillo_comida">
+                            <option value="">Selecciona un platillo...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bloque Cena -->
+                <div class="card mb-3 border-dark">
+                    <div class="card-body bg-light">
+                        <h5 class="card-title">Cena</h5>
+                        <select class="form-select form-control" name="platillo_cena">
+                            <option value="">Selecciona un platillo...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-success btn-lg px-5">Guardar Menú</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

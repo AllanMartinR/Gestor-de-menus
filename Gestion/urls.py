@@ -9,6 +9,7 @@ from .views import (
     PlatilloListView,
     PlatilloUpdateView,
     platillo_baja,
+    armado_menu,
 )
 
 # Este urls.py ya define los prefijos completos. Inclúyelo en la raíz
@@ -16,14 +17,14 @@ from .views import (
 #   path('', include('Gestion.urls')),
 #
 # Rutas resultantes:
-#   /ingredientes/                  -> ingrediente_list
-#   /ingredientes/nuevo/            -> ingrediente_create
-#   /ingredientes/<pk>/editar/      -> ingrediente_update
-#   /ingredientes/<pk>/baja/        -> ingrediente_baja (solo POST)
-#   /platillos/                     -> platillo_list
-#   /platillos/nuevo/               -> platillo_create
-#   /platillos/<pk>/editar/         -> platillo_update
-#   /platillos/<pk>/baja/           -> platillo_baja (solo POST)
+#   /ingredientes/              -> ingrediente_list
+#   /ingredientes/nuevo/        -> ingrediente_create
+#   /ingredientes/<pk>/editar/  -> ingrediente_update
+#   /ingredientes/<pk>/baja/    -> ingrediente_baja (solo POST)
+#   /platillos/                 -> platillo_list
+#   /platillos/nuevo/           -> platillo_create
+#   /platillos/<pk>/editar/     -> platillo_update
+#   /platillos/<pk>/baja/       -> platillo_baja (solo POST)
 
 urlpatterns = [
     # Ingredientes
@@ -37,4 +38,7 @@ urlpatterns = [
     path('platillos/nuevo/', PlatilloCreateView.as_view(), name='platillo_create'),
     path('platillos/<int:pk>/editar/', PlatilloUpdateView.as_view(), name='platillo_update'),
     path('platillos/<int:pk>/baja/', platillo_baja, name='platillo_baja'),
+    
+    # Menús
+    path('armar-menu/', armado_menu, name='armado_menu'),
 ]
