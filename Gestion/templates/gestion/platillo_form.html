@@ -3,6 +3,36 @@
 {% block title %}{{ titulo }} | SICSA{% endblock %}
 
 {% block content %}
+<style>
+    .ing-autocomplete { position: relative; }
+    .ing-autocomplete-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        max-height: 220px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: .375rem;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+        display: none;
+    }
+    .ing-autocomplete-list.show { display: block; }
+    .ing-autocomplete-item {
+        padding: .5rem .75rem;
+        cursor: pointer;
+        font-size: .925rem;
+    }
+    .ing-autocomplete-item:hover,
+    .ing-autocomplete-item.active { background-color: #e9ecef; }
+    .ing-autocomplete-empty {
+        padding: .5rem .75rem;
+        color: #6c757d;
+        font-size: .875rem;
+    }
+</style>
 <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6">
         <div class="card shadow-sm">
@@ -181,6 +211,93 @@ document.addEventListener('DOMContentLoaded', function () {
         costoEntre100Celda.textContent = '$' + (total / 100).toFixed(2);
     }
 
+    function activarAutocompletado(row) {
+        var select = row.querySelector('select');
+        if (!select || select.dataset.autocompleteReady === '1') {
+            return;
+        }
+        select.dataset.autocompleteReady = '1';
+        select.classList.add('d-none');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'ing-autocomplete';
+
+        var inputGroup = document.createElement('div');
+        inputGroup.className = 'input-group';
+        inputGroup.innerHTML =
+            '<span class="input-group-text">🔍</span>' +
+            '<input type="text" class="form-control ing-autocomplete-input" placeholder="Buscar ingrediente..." autocomplete="off">';
+
+        var lista = document.createElement('div');
+        lista.className = 'ing-autocomplete-list';
+
+        wrapper.appendChild(inputGroup);
+        wrapper.appendChild(lista);
+        select.parentNode.insertBefore(wrapper, select);
+
+        var input = wrapper.querySelector('.ing-autocomplete-input');
+
+        // Si la fila ya viene con un ingrediente elegido (modo edición), mostrarlo.
+        if (select.value && ingredientesData[select.value]) {
+            input.value = ingredientesData[select.value].nombre;
+        }
+
+        function cerrarLista() {
+            lista.classList.remove('show');
+        }
+
+        function seleccionar(pk) {
+            select.value = pk;
+            input.value = ingredientesData[pk] ? ingredientesData[pk].nombre : '';
+            cerrarLista();
+            recalcularCosteo();
+        }
+
+        function renderLista(filtro) {
+            lista.innerHTML = '';
+            var texto = (filtro || '').trim().toLowerCase();
+            var coincidencias = Object.keys(ingredientesData).filter(function (pk) {
+                return ingredientesData[pk].nombre.toLowerCase().indexOf(texto) !== -1;
+            });
+
+            if (coincidencias.length === 0) {
+                var vacio = document.createElement('div');
+                vacio.className = 'ing-autocomplete-empty';
+                vacio.textContent = 'Sin coincidencias';
+                lista.appendChild(vacio);
+            } else {
+                coincidencias.forEach(function (pk) {
+                    var datos = ingredientesData[pk];
+                    var item = document.createElement('div');
+                    item.className = 'ing-autocomplete-item';
+                    item.textContent = datos.nombre + ' — ' + datos.unidad + ' ($' + datos.costo.toFixed(2) + ')';
+                    item.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        seleccionar(pk);
+                    });
+                    lista.appendChild(item);
+                });
+            }
+            lista.classList.add('show');
+        }
+
+        input.addEventListener('focus', function () { renderLista(input.value); });
+        input.addEventListener('input', function () {
+            select.value = '';
+            renderLista(input.value);
+            recalcularCosteo();
+        });
+        input.addEventListener('blur', function () {
+            setTimeout(function () {
+                cerrarLista();
+                // Si quedó texto sin coincidir con una selección válida, limpiar.
+                if (!select.value) {
+                    input.value = '';
+                }
+            }, 150);
+        });
+    }
+
     function activarQuitar(row) {
         var btn = row.querySelector('.btn-quitar-fila');
         if (btn) {
@@ -198,7 +315,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    document.querySelectorAll('.receta-row').forEach(activarQuitar);
+    document.querySelectorAll('.receta-row').forEach(function (row) {
+        activarQuitar(row);
+        activarAutocompletado(row);
+    });
 
     btnAgregar.addEventListener('click', function () {
         var formCount = parseInt(totalFormsInput.value, 10);
@@ -209,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
         rowsContainer.appendChild(newRow);
         totalFormsInput.value = formCount + 1;
         activarQuitar(newRow);
+        activarAutocompletado(newRow);
     });
 
     rowsContainer.addEventListener('input', recalcularCosteo);
