@@ -1,92 +1,122 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Armado de Menús | SICSA{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">Gestión de Menús</h2>
-
-    <!-- SECCIÓN 1: Catálogo de Menús Guardados (Tu primer dibujo) -->
-    <div class="mb-5">
-        <h4 class="mb-3">Menús Guardados</h4>
-        <div class="d-flex flex-wrap gap-3">
-            
-            <!-- Tarjeta de ejemplo de un menú guardado -->
-            <div class="card border-success shadow-sm" style="width: 18rem;">
-                <div class="card-body">
-                    <h5 class="card-title text-success">Menú 1</h5>
-                    <ul class="card-text small text-muted">
-                        <li>Huevos Rancheros (Desayuno)</li>
-                        <li>Pollo Asado (Comida)</li>
-                    </ul>
-                    <button class="btn btn-sm btn-outline-info w-100 mb-3">Más detalles</button>
-                    <div class="d-flex justify-content-between">
-                        <button class="btn btn-sm btn-warning text-dark">Editar</button>
-                        <button class="btn btn-sm btn-danger">Eliminar</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botón para crear un Menú Nuevo -->
-            <div class="card border-primary border-dashed shadow-sm d-flex align-items-center justify-content-center" style="width: 18rem; min-height: 200px; border-style: dashed;">
-                <button class="btn btn-primary">+ Nuevo Menú</button>
-            </div>
-            
+<div class="container-fluid px-0">
+    <!-- Header del Módulo -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-1 fw-bold text-dark">Gestión de Menús</h2>
+            <p class="text-muted small mb-0">Organización y asignación de platillos por tiempos de comida.</p>
         </div>
     </div>
 
-    <hr class="my-5">
-
-    <!-- SECCIÓN 2: Área de Armado (Tu segundo dibujo) -->
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Crear / Editar Menú</h4>
+    <!-- Menús Guardados -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h3 class="h6 text-uppercase text-secondary fw-bold mb-3">Menús Guardados</h3>
+            
+            <div class="row g-3">
+                {% for menu in menus %}
+                <div class="col-md-4">
+                    <div class="card h-100 border bg-light shadow-sm">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div>
+                                <h4 class="h5 text-primary fw-bold mb-2">{{ menu.nombre }}</h4>
+                                <ul class="list-unstyled small text-muted mb-3">
+                                    <li class="mb-1"><strong>Tiempos de comida:</strong></li>
+                                    {% for mp in menu.composicion.all %}
+                                        <li>• <strong>{{ mp.tiempo }}:</strong> {{ mp.platillo.nombre }}</li>
+                                    {% empty %}
+                                        <li class="text-muted">Sin platillos asignados</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <!-- Botón Editar -->
+                                <a href="{% url 'armado_menu' %}?editar={{ menu.id }}" class="btn btn-sm btn-outline-primary fw-semibold">Editar</a>
+                                
+                                <!-- Botón de Eliminar -->
+                                <form method="post" action="{% url 'menu_eliminar' menu.id %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar el menú {{ menu.nombre }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none p-0 m-0 fw-semibold">Eliminar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-muted mb-0">No hay menús guardados todavía. Usa el formulario de abajo para crear uno.</p>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        <div class="card-body">
-            <form method="POST">
+    </div>
+
+    <!-- Formulario para Crear / Editar Menú -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <h3 class="h6 text-uppercase text-secondary fw-bold mb-3">
+                {% if menu_a_editar %} Editando Menú: {{ menu_a_editar.nombre }} {% else %} Crear Menú {% endif %}
+            </h3>
+            
+            <form method="POST" class="row g-3">
                 {% csrf_token %}
                 
-                <div class="mb-4">
-                    <label class="form-label fw-bold">Nombre del Menú:</label>
-                    <input type="text" class="form-control" name="nombre_menu" placeholder="Ej. Menú Industrial Norteño" required>
+                {% if menu_a_editar %}
+                    <input type="hidden" name="menu_id_oculto" value="{{ menu_a_editar.id }}">
+                {% endif %}
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold small">Nombre del Menú:</label>
+                    <input type="text" name="nombre_menu" required class="form-control" value="{% if menu_a_editar %}{{ menu_a_editar.nombre }}{% endif %}" placeholder="Ej. Menú Industrial Norteño">
                 </div>
 
-                <!-- Bloque Desayuno -->
-                <div class="card mb-3 border-dark">
-                    <div class="card-body bg-light">
-                        <h5 class="card-title">Desayuno</h5>
-                        <p class="text-danger small fw-bold mb-1">⚠ Platillo no disponible (Faltan insumos)</p>
-                        <select class="form-select form-control" name="platillo_desayuno">
-                            <option value="">Selecciona un platillo...</option>
-                            <!-- Aquí Django cargará los platillos después -->
-                        </select>
-                    </div>
+                <!-- Desayuno -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-secondary">Desayuno</label>
+                    <select name="platillo_desayuno" class="form-select">
+                        <option value="">Selecciona un platillo...</option>
+                        {% for platillo in platillos %}
+                            <option value="{{ platillo.id }}">{{ platillo.nombre }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <!-- Bloque Comida -->
-                <div class="card mb-3 border-dark">
-                    <div class="card-body bg-light">
-                        <h5 class="card-title">Comida</h5>
-                        <select class="form-select form-control" name="platillo_comida">
-                            <option value="">Selecciona un platillo...</option>
-                        </select>
-                    </div>
+                <!-- Comida -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-secondary">Comida</label>
+                    <select name="platillo_comida" class="form-select">
+                        <option value="">Selecciona un platillo...</option>
+                        {% for platillo in platillos %}
+                            <option value="{{ platillo.id }}">{{ platillo.nombre }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <!-- Bloque Cena -->
-                <div class="card mb-3 border-dark">
-                    <div class="card-body bg-light">
-                        <h5 class="card-title">Cena</h5>
-                        <select class="form-select form-control" name="platillo_cena">
-                            <option value="">Selecciona un platillo...</option>
-                        </select>
-                    </div>
+                <!-- Cena -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-secondary">Cena</label>
+                    <select name="platillo_cena" class="form-select">
+                        <option value="">Selecciona un platillo...</option>
+                        {% for platillo in platillos %}
+                            <option value="{{ platillo.id }}">{{ platillo.nombre }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div class="text-end mt-4">
-                    <button type="submit" class="btn btn-success btn-lg px-5">Guardar Menú</button>
+                <div class="col-12 text-end mt-4">
+                    {% if menu_a_editar %}
+                        <a href="{% url 'armado_menu' %}" class="btn btn-light border px-4 me-2 fw-semibold">Cancelar</a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                        {% if menu_a_editar %} Actualizar Menú {% else %} Guardar Menú {% endif %}
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-
 </div>
 {% endblock %}

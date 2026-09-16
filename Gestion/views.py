@@ -11,11 +11,10 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, UpdateView
 
 from .forms import IngredienteForm, IngredientePlatilloFormSet, PlatilloForm
-from .models import Ingrediente, Platillo
+from .models import Ingrediente, Platillo, Menu, MenuPlatillo
 
 
 def _ingredientes_data_json():
-    """Costo unitario y unidad de cada ingrediente activo, para el costeo en vivo del platillo."""
     datos = {
         str(ingrediente.pk): {
             'nombre': ingrediente.nombre,
@@ -77,14 +76,10 @@ class IngredienteUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)
 @login_required
 @require_POST
 def ingrediente_baja(request, pk):
-    """Baja lógica: activo=False. No usa .delete() ni DeleteView."""
     ingrediente = get_object_or_404(Ingrediente, pk=pk, activo=True)
     ingrediente.activo = False
     ingrediente.save(update_fields=['activo'])
-    messages.success(
-        request,
-        f'El ingrediente "{ingrediente.nombre}" se dio de baja.',
-    )
+    messages.success(request, f'El ingrediente "{ingrediente.nombre}" se dio de baja.')
     return redirect('ingrediente_list')
 
 
@@ -127,9 +122,7 @@ class PlatilloCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     def form_valid(self, form):
         receta_formset = IngredientePlatilloFormSet(self.request.POST, prefix='receta')
         if not receta_formset.is_valid():
-            return self.render_to_response(
-                self.get_context_data(form=form, receta_formset=receta_formset)
-            )
+            return self.render_to_response(self.get_context_data(form=form, receta_formset=receta_formset))
         self.object = form.save()
         receta_formset.instance = self.object
         receta_formset.save()
@@ -153,23 +146,15 @@ class PlatilloUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         context['ingredientes_data_json'] = _ingredientes_data_json()
         if 'receta_formset' not in context:
             if self.request.method == 'POST':
-                context['receta_formset'] = IngredientePlatilloFormSet(
-                    self.request.POST, instance=self.object, prefix='receta'
-                )
+                context['receta_formset'] = IngredientePlatilloFormSet(self.request.POST, instance=self.object, prefix='receta')
             else:
-                context['receta_formset'] = IngredientePlatilloFormSet(
-                    instance=self.object, prefix='receta'
-                )
+                context['receta_formset'] = IngredientePlatilloFormSet(instance=self.object, prefix='receta')
         return context
 
     def form_valid(self, form):
-        receta_formset = IngredientePlatilloFormSet(
-            self.request.POST, instance=self.object, prefix='receta'
-        )
+        receta_formset = IngredientePlatilloFormSet(self.request.POST, instance=self.object, prefix='receta')
         if not receta_formset.is_valid():
-            return self.render_to_response(
-                self.get_context_data(form=form, receta_formset=receta_formset)
-            )
+            return self.render_to_response(self.get_context_data(form=form, receta_formset=receta_formset))
         self.object = form.save()
         receta_formset.instance = self.object
         receta_formset.save()
@@ -180,18 +165,80 @@ class PlatilloUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
 @login_required
 @require_POST
 def platillo_baja(request, pk):
-    """Baja lógica: activo=False. No usa .delete() ni DeleteView."""
     platillo = get_object_or_404(Platillo, pk=pk, activo=True)
     platillo.activo = False
     platillo.save(update_fields=['activo'])
-    messages.success(
-        request,
-        f'El platillo "{platillo.nombre}" se dio de baja.',
-    )
+    messages.success(request, f'El platillo "{platillo.nombre}" se dio de baja.')
     return redirect('platillo_list')
 
 
 @login_required
 def armado_menu(request):
-    """Vista para la pantalla de armado de menús."""
-    return render(request, 'gestion/armado_menu.html')
+    menu_id = request.GET.get('editar')
+    menu_a_editar = None
+
+    if menu_id:
+        menu_a_editar = get_object_or_404(Menu, pk=menu_id)
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre_menu')
+        desayuno_id = request.POST.get('platillo_desayuno')
+        comida_id = request.POST.get('platillo_comida')
+        cena_id = request.POST.get('platillo_cena')
+        editando_id = request.POST.get('menu_id_oculto')
+
+        try:
+            if editando_id:
+                menu_obj = get_object_or_404(Menu, pk=editando_id)
+                menu_obj.nombre = nombre
+                menu_obj.save()
+                MenuPlatillo.objects.filter(menu=menu_obj).delete()
+            else:
+                menu_obj = Menu.objects.create(nombre=nombre)
+
+            # Guardamos cada platillo asignado con su respectivo tiempo
+            if desayuno_id:
+                p_des = Platillo.objects.filter(pk=desayuno_id).first()
+                if p_des:
+                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_des, tiempo='Desayuno')
+            
+            if comida_id:
+                p_com = Platillo.objects.filter(pk=comida_id).first()
+                if p_com:
+                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_com, tiempo='Comida')
+
+            if cena_id:
+                p_cen = Platillo.objects.filter(pk=cena_id).first()
+                if p_cen:
+                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_cen, tiempo='Cena')
+
+            messages.success(request, f'¡El menú "{nombre}" se guardó con éxito!')
+        except Exception as e:
+            messages.error(request, f'Error al procesar el menú: {e}')
+            
+        return redirect('armado_menu')
+
+    try:
+        lista_menus = Menu.objects.all()
+    except:
+        lista_menus = []
+        
+    lista_platillos = Platillo.objects.filter(activo=True)
+    
+    context = {
+        'menus': lista_menus,
+        'platillos': lista_platillos,
+        'menu_a_editar': menu_a_editar,
+    }
+    
+    return render(request, 'gestion/armado_menu.html', context)
+
+
+@login_required
+@require_POST
+def menu_eliminar(request, pk):
+    menu = get_object_or_404(Menu, pk=pk)
+    nombre_menu = menu.nombre
+    menu.delete()
+    messages.success(request, f'El menú "{nombre_menu}" se ha eliminado correctamente.')
+    return redirect('armado_menu')

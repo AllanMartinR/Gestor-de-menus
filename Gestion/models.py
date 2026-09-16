@@ -81,11 +81,18 @@ class Menu(models.Model):
 class MenuPlatillo(models.Model):
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='composicion')
     platillo = models.ForeignKey(Platillo, on_delete=models.RESTRICT)
+    
+    TIEMPOS = [
+        ('Desayuno', 'Desayuno'),
+        ('Comida', 'Comida'),
+        ('Cena', 'Cena'),
+    ]
+    tiempo = models.CharField(max_length=20, choices=TIEMPOS, default='Comida', verbose_name="Tiempo de comida")
 
     class Meta:
-        unique_together = ('menu', 'platillo')
+        unique_together = ('menu', 'platillo', 'tiempo')
         verbose_name = "Platillo de menú"
         verbose_name_plural = "Platillos de menú"
 
     def __str__(self):
-        return f"{self.platillo.nombre} en {self.menu.nombre}"
+        return f"{self.platillo.nombre} ({self.tiempo}) en {self.menu.nombre}"

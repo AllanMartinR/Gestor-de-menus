@@ -10,6 +10,7 @@ from .views import (
     PlatilloUpdateView,
     platillo_baja,
     armado_menu,
+    menu_eliminar,
 )
 
 # Este urls.py ya define los prefijos completos. Inclúyelo en la raíz
@@ -25,6 +26,8 @@ from .views import (
 #   /platillos/nuevo/           -> platillo_create
 #   /platillos/<pk>/editar/     -> platillo_update
 #   /platillos/<pk>/baja/       -> platillo_baja (solo POST)
+#   /armar-menu/                -> armado_menu
+#   /menu/eliminar/<pk>/        -> menu_eliminar (solo POST)
 
 urlpatterns = [
     # Ingredientes
@@ -41,4 +44,5 @@ urlpatterns = [
     
     # Menús
     path('armar-menu/', armado_menu, name='armado_menu'),
+    path('menu/eliminar/<int:pk>/', menu_eliminar, name='menu_eliminar'),
 ]
