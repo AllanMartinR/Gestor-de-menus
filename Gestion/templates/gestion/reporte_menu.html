@@ -1,0 +1,64 @@
+{% extends 'base.html' %} <!-- Cambia esto si tu plantilla principal tiene otro nombre -->
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    
+    <!-- Botón para regresar a la lista limpia -->
+    <a href="javascript:history.back()" class="btn btn-outline-secondary mb-4">
+        &larr; Volver a la lista de menús
+    </a>
+
+    <!-- Tarjeta Principal del Reporte -->
+    <div class="card shadow border-0">
+        <!-- Encabezado con el Título en Azul y el Total en Verde -->
+        <div class="card-header bg-white d-flex justify-content-between align-items-center p-4 border-bottom">
+            <h2 class="mb-0" style="color: #0d6efd; font-weight: bold;">{{ menu.nombre }}</h2>
+            <span class="badge bg-success fs-5 p-2">Total Menú: ${{ menu.costo_total }}</span>
+        </div>
+        
+        <div class="card-body p-4">
+            <h5 class="text-muted mb-3 fw-bold">Desglose Operativo por Turno</h5>
+            
+            <!-- Resumen de Turnos -->
+            <ul class="list-group mb-4">
+                <li class="list-group-item p-3">
+                    <strong>Desayuno</strong> ({{ menu.comensales_desayuno }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_desayuno }}</span><br>
+                    <small class="text-muted">- {{ menu.platillo_desayuno.nombre|default:"Sin platillo asignado" }} | Costo unitario por comensal: ${{ menu.platillo_desayuno.costo_unitario }}</small>
+                </li>
+                <li class="list-group-item p-3">
+                    <strong>Comida</strong> ({{ menu.comensales_comida }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_comida }}</span><br>
+                    <small class="text-muted">- {{ menu.platillo_comida.nombre|default:"Sin platillo asignado" }}</small>
+                </li>
+                <li class="list-group-item p-3">
+                    <strong>Cena</strong> ({{ menu.comensales_cena }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_cena }}</span><br>
+                    <small class="text-muted">- {{ menu.platillo_cena.nombre|default:"Sin platillo asignado" }}</small>
+                </li>
+            </ul>
+
+            <!-- Lista de Insumos -->
+            <div class="alert alert-secondary border-0 rounded-3 p-4">
+                <h6 class="alert-heading fw-bold mb-3">Insumos totales para preparar este menú:</h6>
+                <ul class="mb-0" style="list-style-type: disc; padding-left: 20px;">
+                    <!-- Ajusta 'menu.insumos_totales' según cómo mandes tus insumos desde la base de datos -->
+                    {% for item in menu.insumos_totales %}
+                        <li>{{ item.ingrediente.nombre }}: <strong>{{ item.cantidad }} {{ item.ingrediente.unidad_medida }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE BOTONES ADENTRO DEL MENÚ -->
+        <div class="card-footer bg-light p-4 d-flex justify-content-between align-items-center rounded-bottom">
+            <button onclick="window.print()" class="btn btn-secondary">
+                Imprimir Reporte
+            </button>
+            
+            <div>
+                <!-- OJO: Aquí pondrás las rutas reales para editar y eliminar cuando las tengas -->
+                <a href="#" class="btn btn-primary me-2 px-4">Editar Menú</a>
+                <a href="#" class="btn btn-danger px-4">Eliminar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

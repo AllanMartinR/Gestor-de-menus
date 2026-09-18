@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, UpdateView
 
 from .forms import IngredienteForm, IngredientePlatilloFormSet, PlatilloForm
-from .models import Ingrediente, Platillo, Menu, MenuPlatillo
+from .models import Ingrediente, Platillo, Menu, MenuPlatillo, IngredientePlatillo
 
 
 def _ingredientes_data_json():
@@ -176,41 +176,65 @@ def platillo_baja(request, pk):
 def armado_menu(request):
     menu_id = request.GET.get('editar')
     menu_a_editar = None
+    menu_desayuno_ids = []
+    menu_comida_ids = []
+    menu_cena_ids = []
 
     if menu_id:
         menu_a_editar = get_object_or_404(Menu, pk=menu_id)
+        # Consulta directa a MenuPlatillo
+        for mp in MenuPlatillo.objects.filter(menu=menu_a_editar):
+            if mp.tiempo == 'Desayuno':
+                menu_desayuno_ids.append(mp.platillo.id)
+            elif mp.tiempo == 'Comida':
+                menu_comida_ids.append(mp.platillo.id)
+            elif mp.tiempo == 'Cena':
+                menu_cena_ids.append(mp.platillo.id)
 
     if request.method == 'POST':
         nombre = request.POST.get('nombre_menu')
-        desayuno_id = request.POST.get('platillo_desayuno')
-        comida_id = request.POST.get('platillo_comida')
-        cena_id = request.POST.get('platillo_cena')
+        
+        desayuno_ids = request.POST.getlist('platillo_desayuno')
+        comida_ids = request.POST.getlist('platillo_comida')
+        cena_ids = request.POST.getlist('platillo_cena')
+        
+        try:
+            comensales_desayuno = int(request.POST.get('comensales_desayuno') or 0)
+            comensales_comida = int(request.POST.get('comensales_comida') or 0)
+            comensales_cena = int(request.POST.get('comensales_cena') or 0)
+        except ValueError:
+            comensales_desayuno = comensales_comida = comensales_cena = 0
+        
         editando_id = request.POST.get('menu_id_oculto')
 
         try:
             if editando_id:
                 menu_obj = get_object_or_404(Menu, pk=editando_id)
                 menu_obj.nombre = nombre
+                menu_obj.comensales_desayuno = comensales_desayuno
+                menu_obj.comensales_comida = comensales_comida
+                menu_obj.comensales_cena = comensales_cena
                 menu_obj.save()
                 MenuPlatillo.objects.filter(menu=menu_obj).delete()
             else:
-                menu_obj = Menu.objects.create(nombre=nombre)
+                menu_obj = Menu.objects.create(
+                    nombre=nombre,
+                    comensales_desayuno=comensales_desayuno,
+                    comensales_comida=comensales_comida,
+                    comensales_cena=comensales_cena
+                )
 
-            # Guardamos cada platillo asignado con su respectivo tiempo
-            if desayuno_id:
-                p_des = Platillo.objects.filter(pk=desayuno_id).first()
-                if p_des:
-                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_des, tiempo='Desayuno')
+            for d_id in desayuno_ids:
+                p = Platillo.objects.filter(pk=d_id).first()
+                if p: MenuPlatillo.objects.create(menu=menu_obj, platillo=p, tiempo='Desayuno')
             
-            if comida_id:
-                p_com = Platillo.objects.filter(pk=comida_id).first()
-                if p_com:
-                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_com, tiempo='Comida')
+            for c_id in comida_ids:
+                p = Platillo.objects.filter(pk=c_id).first()
+                if p: MenuPlatillo.objects.create(menu=menu_obj, platillo=p, tiempo='Comida')
 
-            if cena_id:
-                p_cen = Platillo.objects.filter(pk=cena_id).first()
-                if p_cen:
-                    MenuPlatillo.objects.create(menu=menu_obj, platillo=p_cen, tiempo='Cena')
+            for c_id in cena_ids:
+                p = Platillo.objects.filter(pk=c_id).first()
+                if p: MenuPlatillo.objects.create(menu=menu_obj, platillo=p, tiempo='Cena')
 
             messages.success(request, f'¡El menú "{nombre}" se guardó con éxito!')
         except Exception as e:
@@ -218,17 +242,44 @@ def armado_menu(request):
             
         return redirect('armado_menu')
 
-    try:
-        lista_menus = Menu.objects.all()
-    except:
-        lista_menus = []
+    menus_procesados = []
+    for menu in Menu.objects.all():
+        fin = menu.obtener_resumen_financiero()
+        
+        insumos_separados = {'Desayuno': {}, 'Comida': {}, 'Cena': {}}
+        
+        # Consulta directa a MenuPlatillo y a IngredientePlatillo
+        for mp in MenuPlatillo.objects.filter(menu=menu):
+            turno = mp.tiempo
+            comensales = getattr(menu, f'comensales_{turno.lower()}', 0)
+            if comensales > 0:
+                try:
+                    for receta in IngredientePlatillo.objects.filter(platillo=mp.platillo):
+                        ing_nombre = receta.ingrediente.nombre
+                        unidad = receta.ingrediente.get_unidad_medida_display()
+                        cant = float(receta.cantidad) * comensales
+                        
+                        if ing_nombre not in insumos_separados[turno]:
+                            insumos_separados[turno][ing_nombre] = {'cantidad': 0, 'unidad': unidad}
+                        insumos_separados[turno][ing_nombre]['cantidad'] += cant
+                except Exception:
+                    pass
+
+        menus_procesados.append({
+            'menu': menu,
+            'fin': fin,
+            'insumos_separados': insumos_separados
+        })
         
     lista_platillos = Platillo.objects.filter(activo=True)
     
     context = {
-        'menus': lista_menus,
+        'menus_procesados': menus_procesados,
         'platillos': lista_platillos,
         'menu_a_editar': menu_a_editar,
+        'menu_desayuno_ids': menu_desayuno_ids,
+        'menu_comida_ids': menu_comida_ids,
+        'menu_cena_ids': menu_cena_ids,
     }
     
     return render(request, 'gestion/armado_menu.html', context)
@@ -242,3 +293,9 @@ def menu_eliminar(request, pk):
     menu.delete()
     messages.success(request, f'El menú "{nombre_menu}" se ha eliminado correctamente.')
     return redirect('armado_menu')
+
+
+@login_required
+def reporte_menu(request, menu_id):
+    menu = get_object_or_404(Menu, id=menu_id)
+    return render(request, 'gestion/reporte_menu.html', {'menu': menu})
