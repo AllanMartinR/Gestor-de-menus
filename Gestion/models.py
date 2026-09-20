@@ -96,7 +96,7 @@ class Menu(models.Model):
         return self.nombre
 
     def obtener_resumen_financiero(self):
-        """Calcula costos unitarios, totales por turno, insumos globales y costo general del menú."""
+        """Calcula costos unitarios, totales por turno y agrupa insumos por turno y platillo."""
         resumen = {
             'Desayuno': {
                 'comensales': self.comensales_desayuno,
@@ -115,18 +115,24 @@ class Menu(models.Model):
             },
         }
 
-        ingredientes_totales = {}
+        # Nueva estructura para separar los insumos exactamente por platillo
+        ingredientes_agrupados = {
+            'Desayuno': {},
+            'Comida': {},
+            'Cena': {}
+        }
 
         for mp in self.composicion.all():
             tiempo = mp.tiempo
             platillo = mp.platillo
             comensales = getattr(self, f'comensales_{tiempo.lower()}', 0)
 
-            # Costo unitario por porción del platillo
+            # Costo unitario por porción del platillo ajustado a Base 100
             costo_platillo_unitario = sum(
                 float(item.cantidad) * float(item.ingrediente.costo_unitario)
                 for item in platillo.receta.all()
-            )
+            ) / 100
+            
             costo_turno_total = costo_platillo_unitario * comensales
 
             if tiempo in resumen:
@@ -139,24 +145,23 @@ class Menu(models.Model):
                 )
                 resumen[tiempo]['costo_total'] += costo_turno_total
 
-            # Acumular ingredientes totales necesarios para el menú completo
+            # Agrupar insumos por turno y luego por platillo
+            if platillo.nombre not in ingredientes_agrupados[tiempo]:
+                ingredientes_agrupados[tiempo][platillo.nombre] = []
+                
             for item in platillo.receta.all():
-                ing_nombre = item.ingrediente.nombre
-                ing_unidad = item.ingrediente.get_unidad_medida_display()
                 cantidad_necesaria = float(item.cantidad) * comensales
-
-                if ing_nombre not in ingredientes_totales:
-                    ingredientes_totales[ing_nombre] = {
-                        'cantidad': 0,
-                        'unidad': ing_unidad,
-                    }
-                ingredientes_totales[ing_nombre]['cantidad'] += cantidad_necesaria
+                ingredientes_agrupados[tiempo][platillo.nombre].append({
+                    'nombre': item.ingrediente.nombre,
+                    'cantidad': cantidad_necesaria,
+                    'unidad': item.ingrediente.get_unidad_medida_display()
+                })
 
         costo_total_menu = sum(r['costo_total'] for r in resumen.values())
 
         return {
             'resumen_tiempos': resumen,
-            'ingredientes_totales': ingredientes_totales,
+            'ingredientes_agrupados': ingredientes_agrupados,
             'costo_total_menu': costo_total_menu,
         }
 

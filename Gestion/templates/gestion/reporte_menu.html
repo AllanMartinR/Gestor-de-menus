@@ -1,4 +1,4 @@
-{% extends 'base.html' %} <!-- Cambia esto si tu plantilla principal tiene otro nombre -->
+{% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-4 mb-5">
@@ -8,57 +8,89 @@
         &larr; Volver a la lista de menús
     </a>
 
-    <!-- Tarjeta Principal del Reporte -->
-    <div class="card shadow border-0">
-        <!-- Encabezado con el Título en Azul y el Total en Verde -->
-        <div class="card-header bg-white d-flex justify-content-between align-items-center p-4 border-bottom">
-            <h2 class="mb-0" style="color: #0d6efd; font-weight: bold;">{{ menu.nombre }}</h2>
-            <span class="badge bg-success fs-5 p-2">Total Menú: ${{ menu.costo_total }}</span>
-        </div>
-        
-        <div class="card-body p-4">
-            <h5 class="text-muted mb-3 fw-bold">Desglose Operativo por Turno</h5>
+    <!-- Obtenemos el resumen financiero usando la función que agregamos en models.py -->
+    {% with resumen=menu.obtener_resumen_financiero %}
+    
+    <div class="accordion shadow-sm border-0" id="accordionMenu">
+        <div class="accordion-item mb-4 rounded-3 border-0 shadow">
             
-            <!-- Resumen de Turnos -->
-            <ul class="list-group mb-4">
-                <li class="list-group-item p-3">
-                    <strong>Desayuno</strong> ({{ menu.comensales_desayuno }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_desayuno }}</span><br>
-                    <small class="text-muted">- {{ menu.platillo_desayuno.nombre|default:"Sin platillo asignado" }} | Costo unitario por comensal: ${{ menu.platillo_desayuno.costo_unitario }}</small>
-                </li>
-                <li class="list-group-item p-3">
-                    <strong>Comida</strong> ({{ menu.comensales_comida }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_comida }}</span><br>
-                    <small class="text-muted">- {{ menu.platillo_comida.nombre|default:"Sin platillo asignado" }}</small>
-                </li>
-                <li class="list-group-item p-3">
-                    <strong>Cena</strong> ({{ menu.comensales_cena }} comensales) — <span class="text-success">Costo Turno: ${{ menu.costo_cena }}</span><br>
-                    <small class="text-muted">- {{ menu.platillo_cena.nombre|default:"Sin platillo asignado" }}</small>
-                </li>
-            </ul>
-
-            <!-- Lista de Insumos -->
-            <div class="alert alert-secondary border-0 rounded-3 p-4">
-                <h6 class="alert-heading fw-bold mb-3">Insumos totales para preparar este menú:</h6>
-                <ul class="mb-0" style="list-style-type: disc; padding-left: 20px;">
-                    <!-- Ajusta 'menu.insumos_totales' según cómo mandes tus insumos desde la base de datos -->
-                    {% for item in menu.insumos_totales %}
-                        <li>{{ item.ingrediente.nombre }}: <strong>{{ item.cantidad }} {{ item.ingrediente.unidad_medida }}</strong></li>
+            <!-- 1. Encabezado (Título Azul, Total Verde y Botones) -->
+            <h2 class="accordion-header position-relative" id="heading{{ menu.id }}">
+                <button class="accordion-button collapsed text-primary fw-bold fs-4 bg-white py-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ menu.id }}" aria-expanded="false" aria-controls="collapse{{ menu.id }}">
+                    {{ menu.nombre }}
+                </button>
+                
+                <!-- Botones de Acción alineados a la derecha -->
+                <div class="position-absolute top-50 end-0 translate-middle-y me-5 pe-4 d-flex align-items-center" style="z-index: 5;">
+                    <span class="badge bg-success fs-5 px-3 py-2 me-4 shadow-sm">Total Menú: ${{ resumen.costo_total_menu|floatformat:2 }}</span>
+                    <!-- OJO: Aquí pondrás las rutas reales para editar y eliminar cuando las tengas -->
+                    <a href="#" class="btn btn-sm btn-warning me-2 text-dark fw-bold px-3 shadow-sm">Editar</a>
+                    <a href="#" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm">Eliminar</a>
+                </div>
+            </h2>
+            
+            <!-- 2. Cuerpo Colapsable con el Reporte (Se oculta hasta presionar) -->
+            <div id="collapse{{ menu.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ menu.id }}" data-bs-parent="#accordionMenu">
+                <div class="accordion-body p-4 bg-light border-top">
+                    
+                    <h5 class="text-muted mb-4 fw-bold border-bottom pb-2">Desglose Operativo por Turno</h5>
+                    
+                    <!-- Resumen de Turnos (Iteramos sobre los datos del nuevo models.py) -->
+                    {% for turno, datos in resumen.resumen_tiempos.items %}
+                        {% if datos.comensales > 0 %}
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-body p-3">
+                                <h5 class="fw-bold mb-2">
+                                    • {{ turno }} <span class="text-muted fw-normal fs-6">({{ datos.comensales }} comensales)</span> — 
+                                    <span class="text-success">Costo Turno: ${{ datos.costo_total|floatformat:2 }}</span>
+                                </h5>
+                                <ul class="list-unstyled ms-4 mb-0 text-muted">
+                                    {% for platillo in datos.platillos %}
+                                        <li>- <strong>{{ platillo.nombre }}</strong> | Costo unitario por comensal: ${{ platillo.costo_unitario|floatformat:2 }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
                     {% endfor %}
-                </ul>
-            </div>
-        </div>
 
-        <!-- SECCIÓN DE BOTONES ADENTRO DEL MENÚ -->
-        <div class="card-footer bg-light p-4 d-flex justify-content-between align-items-center rounded-bottom">
-            <button onclick="window.print()" class="btn btn-secondary">
-                Imprimir Reporte
-            </button>
-            
-            <div>
-                <!-- OJO: Aquí pondrás las rutas reales para editar y eliminar cuando las tengas -->
-                <a href="#" class="btn btn-primary me-2 px-4">Editar Menú</a>
-                <a href="#" class="btn btn-danger px-4">Eliminar</a>
+                    <!-- Nueva Lista de Insumos Agrupados por Platillo -->
+                    <div class="alert alert-secondary border-0 shadow-sm rounded-3 p-4 mt-4 bg-white">
+                        <h6 class="alert-heading fw-bold mb-4 text-uppercase text-secondary">Insumos totales divididos por turno y platillo:</h6>
+                        
+                        {% for turno, platillos in resumen.ingredientes_agrupados.items %}
+                            {% if platillos %}
+                                <h5 class="mt-3"><span class="badge bg-primary px-3 py-2 shadow-sm">{{ turno }}</span></h5>
+                                <div class="row mt-3">
+                                    {% for platillo_nombre, ingredientes in platillos.items %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="p-3 border border-2 border-light rounded bg-light h-100 shadow-sm">
+                                                <strong class="text-secondary border-bottom border-secondary d-block mb-2 pb-1">{{ platillo_nombre }}</strong>
+                                                <ul class="list-unstyled mb-0 ms-2" style="font-size: 0.95rem;">
+                                                    {% for ing in ingredientes %}
+                                                        <li>• {{ ing.nombre }}: <strong class="text-dark">{{ ing.cantidad|floatformat:2 }}</strong> <small class="text-muted">{{ ing.unidad }}</small></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Botón para Imprimir -->
+                    <div class="d-flex justify-content-end mt-4">
+                        <button onclick="window.print()" class="btn btn-secondary px-4 fw-bold shadow-sm">
+                            Imprimir Reporte
+                        </button>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
+    
+    {% endwith %}
 </div>
 {% endblock %}

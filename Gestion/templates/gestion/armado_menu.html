@@ -12,106 +12,91 @@
         </div>
     </div>
 
-    <!-- Menús Guardados y Reportes Financieros -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-            <h3 class="h6 text-uppercase text-secondary fw-bold mb-3">Menús Registrados y Desglose de Costos</h3>
+    <!-- Menús Guardados y Reportes Financieros (AHORA CON ACORDEÓN) -->
+    <h3 class="h6 text-uppercase text-secondary fw-bold mb-3 mt-4">Menús Registrados y Desglose de Costos</h3>
+    
+    <div class="accordion shadow-sm border-0 mb-5" id="accordionMenus">
+        {% for item in menus_procesados %}
+        {% with resumen=item.menu.obtener_resumen_financiero %}
+        <div class="accordion-item mb-4 rounded-3 border-0 shadow">
             
-            <div class="row g-3">
-                {% for item in menus_procesados %}
-                <div class="col-md-6">
-                    <div class="card h-100 border bg-light shadow-sm">
-                        <div class="card-body d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h4 class="h5 text-primary fw-bold mb-0">{{ item.menu.nombre }}</h4>
-                                    <span class="badge bg-success fs-6">Total Menú: ${{ item.fin.costo_total_menu|floatformat:2 }}</span>
-                                </div>
-                                
-                                <hr class="my-2">
-
-                                <!-- Desglose de Costos y Platillos por Turno -->
-                                {% for tiempo, data in item.fin.resumen_tiempos.items %}
-                                    <div class="mb-2 small">
-                                        <div class="fw-bold text-dark">
-                                            • {{ tiempo }} 
-                                            <span class="text-muted fw-normal">({{ data.comensales }} comensales)</span> — 
-                                            <span class="text-success fw-semibold">Costo Turno: ${{ data.costo_total|floatformat:2 }}</span>
-                                        </div>
-                                        <ul class="list-unstyled ms-3 mb-1 text-muted">
-                                            {% for p in data.platillos %}
-                                                <li>- {{ p.nombre }} | Costo unitario por comensal: ${{ p.costo_unitario|floatformat:2 }}</li>
-                                            {% empty %}
-                                                <li class="text-muted italic">Sin platillo asignado</li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
-                                {% endfor %}
-
-                                <!-- NUEVO: Insumos Divididos por Turno -->
-                                <div class="mt-3 p-3 bg-white rounded border">
-                                    <strong class="small text-secondary d-block mb-3 border-bottom pb-1">Insumos totales divididos por turno:</strong>
-                                    
-                                    <div class="row">
-                                        <!-- Insumos Desayuno -->
-                                        <div class="col-12 mb-3">
-                                            <span class="badge bg-primary mb-2">Desayuno</span>
-                                            <ul class="list-unstyled small mb-0 text-dark ms-2">
-                                                {% for ing_nombre, info in item.insumos_separados.Desayuno.items %}
-                                                    <li>• {{ ing_nombre }}: <strong>{{ info.cantidad|floatformat:2 }} {{ info.unidad }}</strong></li>
-                                                {% empty %}
-                                                    <li class="text-muted fst-italic">Sin insumos registrados</li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-
-                                        <!-- Insumos Comida -->
-                                        <div class="col-12 mb-3">
-                                            <span class="badge bg-success mb-2">Comida</span>
-                                            <ul class="list-unstyled small mb-0 text-dark ms-2">
-                                                {% for ing_nombre, info in item.insumos_separados.Comida.items %}
-                                                    <li>• {{ ing_nombre }}: <strong>{{ info.cantidad|floatformat:2 }} {{ info.unidad }}</strong></li>
-                                                {% empty %}
-                                                    <li class="text-muted fst-italic">Sin insumos registrados</li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-
-                                        <!-- Insumos Cena -->
-                                        <div class="col-12">
-                                            <span class="badge bg-dark mb-2">Cena</span>
-                                            <ul class="list-unstyled small mb-0 text-dark ms-2">
-                                                {% for ing_nombre, info in item.insumos_separados.Cena.items %}
-                                                    <li>• {{ ing_nombre }}: <strong>{{ info.cantidad|floatformat:2 }} {{ info.unidad }}</strong></li>
-                                                {% empty %}
-                                                    <li class="text-muted fst-italic">Sin insumos registrados</li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top">
-                                <a href="{% url 'armado_menu' %}?editar={{ item.menu.id }}" class="btn btn-sm btn-outline-primary fw-semibold">Editar</a>
-                                <form method="post" action="{% url 'menu_eliminar' item.menu.id %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar el menú {{ item.menu.nombre }}?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none p-0 m-0 fw-semibold">Eliminar</button>
-                                </form>
+            <!-- 1. Encabezado del Menú (Visible) -->
+            <h2 class="accordion-header position-relative" id="heading{{ item.menu.id }}">
+                <button class="accordion-button collapsed text-primary fw-bold fs-4 bg-white py-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ item.menu.id }}" aria-expanded="false" aria-controls="collapse{{ item.menu.id }}">
+                    {{ item.menu.nombre }}
+                </button>
+                
+                <!-- Botones de Acción y Total -->
+                <div class="position-absolute top-50 end-0 translate-middle-y me-5 pe-4 d-flex align-items-center" style="z-index: 5;">
+                    <span class="badge bg-success fs-5 px-3 py-2 me-4 shadow-sm">Total Menú: ${{ resumen.costo_total_menu|floatformat:2 }}</span>
+                    <a href="{% url 'armado_menu' %}?editar={{ item.menu.id }}" class="btn btn-sm btn-warning me-2 text-dark fw-bold px-3 shadow-sm">Editar</a>
+                    <form method="post" action="{% url 'menu_eliminar' item.menu.id %}" class="d-inline m-0 p-0" onsubmit="return confirm('¿Estás seguro de eliminar el menú {{ item.menu.nombre }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm">Eliminar</button>
+                    </form>
+                </div>
+            </h2>
+            
+            <!-- 2. Cuerpo Colapsable (Oculto hasta hacer clic) -->
+            <div id="collapse{{ item.menu.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ item.menu.id }}" data-bs-parent="#accordionMenus">
+                <div class="accordion-body p-4 bg-light border-top">
+                    
+                    <h5 class="text-muted mb-4 fw-bold border-bottom pb-2">Desglose Operativo por Turno</h5>
+                    
+                    <!-- Resumen por turnos -->
+                    {% for turno, datos in resumen.resumen_tiempos.items %}
+                        {% if datos.comensales > 0 %}
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-body p-3">
+                                <h5 class="fw-bold mb-2">
+                                    • {{ turno }} <span class="text-muted fw-normal fs-6">({{ datos.comensales }} comensales)</span> — 
+                                    <span class="text-success">Costo Turno: ${{ datos.costo_total|floatformat:2 }}</span>
+                                </h5>
+                                <ul class="list-unstyled ms-4 mb-0 text-muted">
+                                    {% for platillo in datos.platillos %}
+                                        <li>- <strong>{{ platillo.nombre }}</strong> | Costo unitario por comensal: ${{ platillo.costo_unitario|floatformat:2 }}</li>
+                                    {% endfor %}
+                                </ul>
                             </div>
                         </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Insumos agrupados por platillo -->
+                    <div class="alert alert-secondary border-0 shadow-sm rounded-3 p-4 mt-4 bg-white">
+                        <h6 class="alert-heading fw-bold mb-4 text-uppercase text-secondary">Insumos totales divididos por turno y platillo:</h6>
+                        
+                        {% for turno, platillos in resumen.ingredientes_agrupados.items %}
+                            {% if platillos %}
+                                <h5 class="mt-3"><span class="badge bg-primary px-3 py-2 shadow-sm">{{ turno }}</span></h5>
+                                <div class="row mt-3">
+                                    {% for platillo_nombre, ingredientes in platillos.items %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="p-3 border border-2 border-light rounded bg-light h-100 shadow-sm">
+                                                <strong class="text-secondary border-bottom border-secondary d-block mb-2 pb-1">{{ platillo_nombre }}</strong>
+                                                <ul class="list-unstyled mb-0 ms-2" style="font-size: 0.95rem;">
+                                                    {% for ing in ingredientes %}
+                                                        <li>• {{ ing.nombre }}: <strong class="text-dark">{{ ing.cantidad|floatformat:2 }}</strong> <small class="text-muted">{{ ing.unidad }}</small></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
+
                 </div>
-                {% empty %}
-                <div class="col-12">
-                    <p class="text-muted mb-0">No hay menús guardados todavía.</p>
-                </div>
-                {% endfor %}
             </div>
         </div>
+        {% endwith %}
+        {% empty %}
+            <div class="alert alert-info shadow-sm border-0">No hay menús guardados todavía.</div>
+        {% endfor %}
     </div>
 
-    <!-- Formulario para Crear / Editar -->
+    <!-- Formulario para Crear / Editar (INTACTO) -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
             <h3 class="h6 text-uppercase text-secondary fw-bold mb-3">
