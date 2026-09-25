@@ -10,6 +10,7 @@ class Ingrediente(models.Model):
         ('pz', 'Pieza (pz)'),
         ('g', 'Gramo (g)'),
         ('ml', 'Mililitro (ml)'),
+        ('gal', 'Galón (gal)'),
     ]
 
     nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre")

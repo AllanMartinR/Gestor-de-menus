@@ -32,15 +32,19 @@ FAMILIAS: dict[str, str] = {
     'g': FAMILIA_MASA,
     'lt': FAMILIA_VOLUMEN,
     'ml': FAMILIA_VOLUMEN,
+    'gal': FAMILIA_VOLUMEN,
     'pz': FAMILIA_PIEZA,
 }
 
 # A la unidad canónica de la familia (kg o lt).
+# Galón = galón estadounidense (US liquid gallon), 1 gal = 3.785411784 lt.
+# Si tu proveedor usa galón imperial (4.54609 lt), ajusta este factor.
 FACTOR_A_CANONICA: dict[str, Decimal] = {
     'kg': Decimal('1'),
     'g': Decimal('0.001'),
     'lt': Decimal('1'),
     'ml': Decimal('0.001'),
+    'gal': Decimal('3.785411784'),
 }
 
 
